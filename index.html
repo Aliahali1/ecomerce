@@ -681,12 +681,18 @@ function results(st){
   const now=new Date(),pad=n=>String(n).padStart(2,'0');
   const stamp=now.getFullYear()+'-'+pad(now.getMonth()+1)+'-'+pad(now.getDate())+' '+pad(now.getHours())+':'+pad(now.getMinutes());
   const nStages=Object.keys(S.done).filter(k=>k!=='final').length;
-  const rec={name:S.name,cls:S.cls||'',final:st.score,right:st.right,stars:stars,total:S.pts,stages:nStages};
+  const rec={rid:Date.now().toString(36)+Math.random().toString(36).slice(2,8),name:S.name,cls:S.cls||'',final:st.score,right:st.right,stars:stars,total:S.pts,stages:nStages};
   const row=[stamp,rec.name,rec.cls,rec.final,rec.right,rec.stars,rec.total,rec.stages];
   $('#cpy').onclick=async()=>{const txt=row.join('\t');try{await navigator.clipboard.writeText(txt);$('#cps').className='fb good';$('#cps').textContent='تم النسخ. الصقيه في أول خلية فارغة بالعمود A في ورقة النتائج.'}catch(e){const ta=document.createElement('textarea');ta.value=txt;document.body.appendChild(ta);ta.select();try{document.execCommand('copy');$('#cps').className='fb good';$('#cps').textContent='تم النسخ.'}catch(_){$('#cps').className='fb no';$('#cps').textContent='تعذر النسخ، اطلبي من معلمتكِ تسجيل النتيجة.'}ta.remove()}};
   const sst=$('#sst');
-  if(CONFIG.SCRIPT_URL){ const send=()=>{sst.className='fb';sst.textContent='جارٍ إرسال النتيجة...';
-      fetch(CONFIG.SCRIPT_URL,{method:'POST',mode:'no-cors',body:new URLSearchParams(rec)}).then(()=>{sst.className='fb good';sst.textContent='تم إرسال نتيجتكِ إلى المعلمة.'}).catch(()=>{sst.className='fb no';sst.innerHTML='تعذر الإرسال. تأكدي من الاتصال بالإنترنت <button class="btn ghost sm" id="rt">إعادة الإرسال</button>';$('#rt').onclick=send})}; send() }
+  if(CONFIG.SCRIPT_URL){ const fail=(m)=>{sst.className='fb no';sst.innerHTML=m+' <button class="btn ghost sm" id="rt">إعادة المحاولة</button>';$('#rt').onclick=send};
+    const send=()=>{sst.className='fb';sst.textContent='جارٍ حفظ النتيجة...';
+      fetch(CONFIG.SCRIPT_URL,{method:'POST',headers:{'Content-Type':'text/plain;charset=utf-8'},body:JSON.stringify(rec)})
+        .then(r=>r.text()).then(x=>{ if(x.trim()==='ok'){sst.className='fb good';sst.textContent='تم حفظ نتيجتكِ في ملف المعلمة.'} else fail('لم تُحفظ النتيجة ('+x.replace(/<[^>]*>/g,' ').trim().slice(0,70)+'). أخبري معلمتكِ أو استخدمي زر النسخ.') })
+        .catch(()=>{ fetch(CONFIG.SCRIPT_URL,{method:'POST',mode:'no-cors',body:new URLSearchParams(rec)})
+          .then(()=>{sst.className='fb';sst.textContent='أُرسلت النتيجة لكن لم أستطع التأكد من حفظها. أخبري معلمتكِ أو استخدمي زر النسخ.'})
+          .catch(()=>fail('تعذر الإرسال. تأكدي من الاتصال بالإنترنت.')) })};
+    send() }
   else sst.textContent='لم يُفعَّل الإرسال التلقائي لهذه النسخة. انسخي السطر وأعطيه لمعلمتكِ.';
 }
 
